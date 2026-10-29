@@ -1,10 +1,20 @@
 import { useState } from 'react'
 import { setEvent, useEvent } from '../store'
-import type { Match } from '../types'
+import type { Elims, Match } from '../types'
 
 const renameIn = (m: Match, from: string, to: string): Match => {
   const r = (t: string) => (t === from ? to : t)
   return { ...m, red: [r(m.red[0]), r(m.red[1])], blue: [r(m.blue[0]), r(m.blue[1])], surrogates: m.surrogates?.map(r), dq: m.dq?.map(r) }
+}
+
+const renameInElims = (e: Elims, from: string, to: string): Elims => {
+  const r = (t: string) => (t === from ? to : t)
+  return {
+    ...e,
+    order: e.order.map(r),
+    invites: e.invites.map((i) => ({ ...i, team: r(i.team) })),
+    results: Object.fromEntries(Object.entries(e.results).map(([id, res]) => [id, { ...res, dq: res.dq?.map(r) }])),
+  }
 }
 
 export default function Teams() {
@@ -22,14 +32,16 @@ export default function Teams() {
     setName('')
   }
 
-  // Renaming a team number also updates it in the schedule.
+  // Renaming a team number also updates it in the schedule and eliminations.
   const renumber = (from: string, raw: string) => {
     const to = raw.trim().toUpperCase()
     if (!to || to === from) return
     if (teams.some((t) => t.number === to)) return alert(`${to} is already in the list`)
     setEvent((ev) => ({
+      ...ev,
       teams: ev.teams.map((t) => (t.number === from ? { ...t, number: to } : t)),
       matches: ev.matches.map((m) => renameIn(m, from, to)),
+      elims: ev.elims && renameInElims(ev.elims, from, to),
     }))
   }
 
