@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-alliance-red: #e53935;
+  --color-alliance-blue: #1e88e5;
+}
+
+body {
+  @apply bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100;
+}
+
+input,
+select {
+  @apply rounded border border-zinc-300 bg-white px-1.5 py-0.5 dark:border-zinc-700 dark:bg-zinc-900;
+}
+
+.btn {
+  @apply rounded bg-zinc-200 px-3 py-1 text-sm font-medium hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700;
+}
