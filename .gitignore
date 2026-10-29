@@ -4,3 +4,4 @@ dist
 .claude
 .vercel
 .env*
+/*.mp3

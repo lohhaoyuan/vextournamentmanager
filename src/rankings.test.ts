@@ -58,6 +58,11 @@ describe('computeRankings', () => {
     expect(r.A.sp).toBeCloseTo((10 + 20 + 25) / 3)
   })
 
+  it('ignores skipped matches even if scores were entered', () => {
+    const r = byTeam(computeRankings([], [match('Q1', ['A', 'B'], ['C', 'D'], { redScore: 10, blueScore: 5, skipped: true })]))
+    expect(r.A).toMatchObject({ played: 0, w: 0, wp: 0 })
+  })
+
   it('does not count surrogate appearances', () => {
     const r = byTeam(computeRankings([], [match('Q1', ['A', 'B'], ['C', 'D'], { redScore: 10, blueScore: 5, surrogates: ['A'] })]))
     expect(r.A.played).toBe(0)

@@ -6,10 +6,10 @@ export const settings = {
   autonWinAP: 6,
   autonTieAP: 3,
   timer: {
-    countdownSeconds: 3, // 3-2-1 before auton starts
+    countdownSeconds: 3, // 3-2-1 before auton and before driver
     autonSeconds: 15,
-    pauseSeconds: 3,
     driverSeconds: 105,
+    warningSecondsLeft: 30, // warning sound this many seconds before the end of driver
   },
 }
 

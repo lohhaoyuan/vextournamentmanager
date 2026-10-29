@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import Alliance from '../components/Alliance'
 import RankingsTable from '../components/RankingsTable'
 import Timer from '../components/Timer'
 import { computeRankings } from '../rankings'
 import { useEvent } from '../store'
-import { isPlayed, teamLabel, type Match, type Team } from '../types'
+import { isPlayed } from '../types'
 
 function Card({ title, children, className = '' }: { title: string; children: ReactNode; className?: string }) {
   return (
@@ -11,22 +12,6 @@ function Card({ title, children, className = '' }: { title: string; children: Re
       <h2 className="mb-[0.8vw] text-[1.4vw] font-bold uppercase tracking-widest text-zinc-400">{title}</h2>
       <div className="min-h-0 flex-1">{children}</div>
     </section>
-  )
-}
-
-function Alliance({ side, m, teams, score, won, auton }: {
-  side: 'red' | 'blue'; m: Match; teams: Team[]; score?: number; won?: boolean; auton?: boolean
-}) {
-  const bg = side === 'red' ? 'bg-alliance-red' : 'bg-alliance-blue'
-  return (
-    <div className={`relative flex items-center gap-[1vw] rounded-[0.8vw] px-[1vw] py-[0.6vw] ${bg}
-      ${won === false ? 'opacity-40' : ''} ${won ? 'ring-[0.3vw] ring-white' : ''}`}>
-      <div className="min-w-0 flex-1 text-[1.6vw] leading-tight font-semibold">
-        {m[side].map((t, i) => <div key={i} className="truncate">{teamLabel(t, teams)}</div>)}
-      </div>
-      {auton && <span className="rounded bg-white/90 px-[0.5vw] text-[1vw] font-bold text-zinc-900 uppercase">Auton</span>}
-      {score != null && <div className="text-[3.5vw] font-black tabular-nums">{score}</div>}
-    </div>
   )
 }
 
@@ -59,8 +44,22 @@ const Big = ({ children }: { children: ReactNode }) => (
 export default function Display() {
   const { teams, matches } = useEvent()
   const rankings = useMemo(() => computeRankings(teams.map((t) => t.number), matches), [teams, matches])
-  const next = matches.find((m) => !isPlayed(m))
+  const next = matches.find((m) => !m.skipped && !isPlayed(m))
   const last = matches.findLast(isPlayed)
+
+  // Keep the projector laptop's screen from dimming or sleeping while the display is open (where allowed).
+  useEffect(() => {
+    let lock: WakeLockSentinel | undefined
+    const grab = () => {
+      if (document.visibilityState === 'visible') navigator.wakeLock?.request('screen').then((l) => (lock = l)).catch(() => {})
+    }
+    grab()
+    document.addEventListener('visibilitychange', grab)
+    return () => {
+      document.removeEventListener('visibilitychange', grab)
+      lock?.release()
+    }
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'f' && document.documentElement.requestFullscreen?.()
@@ -81,7 +80,7 @@ export default function Display() {
           ) : <Big>{matches.length ? 'All Done!' : 'No schedule yet'}</Big>}
         </Card>
 
-        <Card title="Match Timer"><Timer /></Card>
+        <Card title="Match Timer"><Timer match={next} teams={teams} /></Card>
 
         <Card title={last ? `Last Result · ${last.id}` : 'Last Result'}>
           {last ? (() => {

@@ -53,8 +53,10 @@ function MatchRow({ m, teams }: { m: Match; teams: Team[] }) {
   )
 
   return (
-    <tr className="border-t border-zinc-200 dark:border-zinc-800">
-      <td className="px-2 py-1 font-semibold">{m.id}</td>
+    <tr className={`border-t border-zinc-200 dark:border-zinc-800 ${m.skipped ? '[&>td:not(:last-child)]:opacity-35' : ''}`}>
+      <td className="px-2 py-1 font-semibold">
+        {m.id}{m.skipped && <span className="ml-1 text-xs font-bold text-amber-500 uppercase">skipped</span>}
+      </td>
       {slot('red', 0)}{slot('red', 1)}{slot('blue', 0)}{slot('blue', 1)}
       <td className="px-1">
         <input type="number" min={0} value={m.redScore ?? ''} onChange={(e) => update({ redScore: num(e.target.value) })}
@@ -78,8 +80,9 @@ function MatchRow({ m, teams }: { m: Match; teams: Team[] }) {
       <td className="text-center accent-alliance-blue">
         <input type="checkbox" checked={m.blueAWP} onChange={(e) => update({ blueAWP: e.target.checked })} />
       </td>
-      <td className="px-1 text-right">
-        <button className="btn" onClick={() => setEdit(!edit)}>{edit ? 'Done' : 'Edit teams'}</button>
+      <td className="px-1 text-right whitespace-nowrap">
+        <button className="btn" onClick={() => setEdit(!edit)}>{edit ? 'Done' : 'Edit teams'}</button>{' '}
+        <button className="btn" onClick={() => update({ skipped: !m.skipped })}>{m.skipped ? 'Unskip' : 'Skip'}</button>
       </td>
     </tr>
   )
@@ -103,6 +106,7 @@ export default function Schedule() {
     setEvent((ev) => ({ ...ev, matches: shuffleMatches(ev.matches) }))
 
   const playedCount = matches.filter(isPlayed).length
+  const skippedCount = matches.filter((m) => m.skipped).length
   const hasSurrogates = matches.some((m) => m.surrogates?.length)
 
   return (
@@ -119,7 +123,8 @@ export default function Schedule() {
           Export CSV
         </button>
         <span className="text-sm text-zinc-500">
-          {playedCount}/{matches.length} played{hasSurrogates && ' · * = surrogate (not ranked)'}
+          {playedCount}/{matches.length} played{skippedCount > 0 && ` · ${skippedCount} skipped`}
+          {hasSurrogates && ' · * = surrogate (not ranked)'}
         </span>
       </div>
 

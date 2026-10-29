@@ -16,6 +16,8 @@ export interface Match {
   blueAWP: boolean
   /** Team numbers appearing as surrogates in this match; their result doesn't count for them. */
   surrogates?: string[]
+  /** Skipped matches are passed over by Up Next and never count, even if scores were entered. */
+  skipped?: boolean
 }
 
 export interface EventData {
@@ -23,7 +25,7 @@ export interface EventData {
   matches: Match[]
 }
 
-export const isPlayed = (m: Match) => m.redScore != null && m.blueScore != null
+export const isPlayed = (m: Match) => !m.skipped && m.redScore != null && m.blueScore != null
 
 /** "8076Y - Chonky", or just the number if the team isn't in the list. */
 export function teamLabel(number: string, teams: Team[]) {
