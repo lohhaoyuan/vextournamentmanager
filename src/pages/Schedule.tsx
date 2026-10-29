@@ -6,15 +6,23 @@ import { isPlayed, type Auton, type Match, type Team } from '../types'
 
 const num = (v: string) => (v === '' ? undefined : Math.max(0, Number(v)))
 
-function TeamSlot({ m, team, edit, teams, onChange }: {
+function TeamSlot({ m, team, edit, teams, onChange, onDQ }: {
   m: Match; team: string; edit: boolean; teams: Team[]
   onChange: (team: string, surrogate: boolean) => void
+  onDQ: () => void
 }) {
   const surrogate = !!m.surrogates?.includes(team)
   if (!edit) {
+    const dq = !!m.dq?.includes(team)
     return (
-      <span title={teams.find((t) => t.number === team)?.name} className="font-mono">
-        {team}{surrogate && <sup title="Surrogate: doesn't count for rankings">*</sup>}
+      <span className="flex items-center gap-1.5">
+        <span title={teams.find((t) => t.number === team)?.name} className={`font-mono ${dq ? 'line-through opacity-60' : ''}`}>
+          {team}{surrogate && <sup title="Surrogate: doesn't count for rankings">*</sup>}
+        </span>
+        <button onClick={onDQ} title={dq ? 'Remove disqualification' : 'Disqualify this team in this match'}
+          className={`rounded px-1 text-[10px] leading-4 font-bold ${dq ? 'bg-amber-500 text-black' : 'text-zinc-400 ring-1 ring-zinc-300 hover:text-zinc-100 dark:ring-zinc-700'}`}>
+          DQ
+        </button>
       </span>
     )
   }
@@ -41,14 +49,18 @@ function MatchRow({ m, teams }: { m: Match; teams: Team[] }) {
     const alliance = [...m[side]] as [string, string]
     alliance[i] = team
     const surrogates = (m.surrogates ?? []).filter((t) => t !== old && t !== team)
-    update({ [side]: alliance, surrogates: surrogate ? [...surrogates, team] : surrogates })
+    update({ [side]: alliance, surrogates: surrogate ? [...surrogates, team] : surrogates, dq: m.dq?.filter((t) => t !== old) })
   }
+
+  const toggleDQ = (team: string) =>
+    update({ dq: m.dq?.includes(team) ? m.dq.filter((t) => t !== team) : [...(m.dq ?? []), team] })
 
   const played = isPlayed(m)
   const winner = played ? (m.redScore! > m.blueScore! ? 'red' : m.blueScore! > m.redScore! ? 'blue' : 'tie') : null
   const slot = (side: 'red' | 'blue', i: 0 | 1) => (
     <td className={`px-2 ${side === 'red' ? 'bg-alliance-red/15' : 'bg-alliance-blue/15'}`}>
-      <TeamSlot m={m} team={m[side][i]} edit={edit} teams={teams} onChange={(t, s) => setSlot(side, i, t, s)} />
+      <TeamSlot m={m} team={m[side][i]} edit={edit} teams={teams}
+        onChange={(t, s) => setSlot(side, i, t, s)} onDQ={() => toggleDQ(m[side][i])} />
     </td>
   )
 

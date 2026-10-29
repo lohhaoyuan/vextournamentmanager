@@ -17,6 +17,21 @@ export interface Ranking {
 
 const SORT_KEYS = ['wp', 'ap', 'sp', 'high', 'high2'] as const
 
+/**
+ * Result for the non-Disqualified teams on one alliance of a played match.
+ * <GG6> A DQ on the other alliance makes it a win (a tie if this alliance has one too);
+ * a Disqualified partner leaves the result unchanged.
+ */
+export function allianceResult(m: Match, side: 'R' | 'B'): 'W' | 'L' | 'T' {
+  const own = side === 'R' ? m.redScore! : m.blueScore!
+  const opp = side === 'R' ? m.blueScore! : m.redScore!
+  const hasDQ = (alliance: string[]) => alliance.some((t) => m.dq?.includes(t))
+  const ownDQ = hasDQ(side === 'R' ? m.red : m.blue)
+  const oppDQ = hasDQ(side === 'R' ? m.blue : m.red)
+  if (oppDQ) return ownDQ ? 'T' : 'W'
+  return own > opp ? 'W' : own < opp ? 'L' : 'T'
+}
+
 /** Ranks every team in `teams` plus any team that appears in the schedule. */
 export function computeRankings(
   teams: string[],
@@ -35,12 +50,16 @@ export function computeRankings(
       const side = m.red.includes(team) ? 'R' : m.blue.includes(team) ? 'B' : null
       if (!side) continue
 
+      // <GG6> A Disqualified team scores 0 and gets no WP, AWP, AP or SP. It still counts as played, as a loss.
+      if (m.dq?.includes(team)) { l++; scores.push(0); continue }
+
       const own = side === 'R' ? m.redScore! : m.blueScore!
       const opp = side === 'R' ? m.blueScore! : m.redScore!
       const awp = side === 'R' ? m.redAWP : m.blueAWP
+      const result = allianceResult(m, side)
 
-      if (own > opp) { w++; wpSum += s.winWP }
-      else if (own < opp) l++
+      if (result === 'W') { w++; wpSum += s.winWP }
+      else if (result === 'L') l++
       else { t++; wpSum += s.tieWP }
       if (awp) wpSum += s.awpWP
 

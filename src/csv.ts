@@ -12,10 +12,11 @@ const AUTON = { R: 'Red', B: 'Blue', D: 'Tie' } as const
 export function scheduleCSV(matches: Match[]) {
   const t = (m: Match, team: string) => (m.surrogates?.includes(team) ? `${team}*` : team)
   return toCSV([
-    ['Match', 'Red 1', 'Red 2', 'Blue 1', 'Blue 2', 'Red Score', 'Blue Score', 'Auton', 'Red AWP', 'Blue AWP', 'Skipped'],
+    ['Match', 'Red 1', 'Red 2', 'Blue 1', 'Blue 2', 'Red Score', 'Blue Score', 'Auton', 'Red AWP', 'Blue AWP', 'Skipped', 'DQ'],
     ...matches.map((m) => [
       m.id, ...m.red.map((x) => t(m, x)), ...m.blue.map((x) => t(m, x)),
       m.redScore, m.blueScore, m.auton ? AUTON[m.auton] : '', m.redAWP ? 'Y' : '', m.blueAWP ? 'Y' : '', m.skipped ? 'Y' : '',
+      m.dq?.join(' ') ?? '',
     ]),
   ])
 }

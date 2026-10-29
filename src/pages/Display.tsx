@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import Alliance from '../components/Alliance'
 import RankingsTable from '../components/RankingsTable'
 import Timer from '../components/Timer'
-import { computeRankings } from '../rankings'
+import { allianceResult, computeRankings } from '../rankings'
 import { useEvent } from '../store'
 import { isPlayed } from '../types'
 
@@ -84,14 +84,17 @@ export default function Display() {
 
         <Card title={last ? `Last Result · ${last.id}` : 'Last Result'}>
           {last ? (() => {
-            const tie = last.redScore === last.blueScore
+            // With a DQ, both alliances can be awarded the win (GG6), so ask the rankings' rule.
+            const red = allianceResult(last, 'R')
+            const blue = allianceResult(last, 'B')
+            const won = (r: string) => (r === 'T' ? undefined : r === 'W')
             return (
               <div className="flex h-full flex-col justify-center gap-[0.8vw]">
                 <Alliance side="red" m={last} teams={teams} score={last.redScore}
-                  won={tie ? undefined : last.redScore! > last.blueScore!} auton={last.auton === 'R' || last.auton === 'D'} />
-                <div className="text-center text-[1.2vw] font-bold text-zinc-500">{tie ? 'TIE' : 'VS'}</div>
+                  won={won(red)} auton={last.auton === 'R' || last.auton === 'D'} />
+                <div className="text-center text-[1.2vw] font-bold text-zinc-500">{red === 'T' && blue === 'T' ? 'TIE' : 'VS'}</div>
                 <Alliance side="blue" m={last} teams={teams} score={last.blueScore}
-                  won={tie ? undefined : last.blueScore! > last.redScore!} auton={last.auton === 'B' || last.auton === 'D'} />
+                  won={won(blue)} auton={last.auton === 'B' || last.auton === 'D'} />
               </div>
             )
           })() : <Big>No matches played</Big>}

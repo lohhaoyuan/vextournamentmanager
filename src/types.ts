@@ -18,6 +18,8 @@ export interface Match {
   surrogates?: string[]
   /** Skipped matches are passed over by Up Next and never count, even if scores were entered. */
   skipped?: boolean
+  /** Team numbers Disqualified in this match (rule GG6; see rankings.ts). */
+  dq?: string[]
 }
 
 export interface EventData {

@@ -4,7 +4,7 @@ import type { Match } from '../types'
 
 const renameIn = (m: Match, from: string, to: string): Match => {
   const r = (t: string) => (t === from ? to : t)
-  return { ...m, red: [r(m.red[0]), r(m.red[1])], blue: [r(m.blue[0]), r(m.blue[1])], surrogates: m.surrogates?.map(r) }
+  return { ...m, red: [r(m.red[0]), r(m.red[1])], blue: [r(m.blue[0]), r(m.blue[1])], surrogates: m.surrogates?.map(r), dq: m.dq?.map(r) }
 }
 
 export default function Teams() {

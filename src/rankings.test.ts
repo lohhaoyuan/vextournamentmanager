@@ -63,6 +63,51 @@ describe('computeRankings', () => {
     expect(r.A).toMatchObject({ played: 0, w: 0, wp: 0 })
   })
 
+  describe('disqualifications (GG6)', () => {
+    const dqMatch = (red: number, blue: number, dq: string[], extra: Partial<Match> = {}) =>
+      byTeam(computeRankings([], [match('Q1', ['A', 'B'], ['C', 'D'], { redScore: red, blueScore: blue, dq, ...extra })]))
+
+    it('gives the DQed team a score of 0, no WP/AP/SP/AWP, and a loss that still counts as played', () => {
+      const r = dqMatch(30, 10, ['A'], { auton: 'R', redAWP: true })
+      expect(r.A).toMatchObject({ played: 1, w: 0, l: 1, t: 0, wp: 0, ap: 0, sp: 0, high: 0 })
+    })
+
+    it('leaves the partner unaffected, keeping its win, AP and AWP', () => {
+      const r = dqMatch(30, 10, ['A'], { auton: 'R', redAWP: true })
+      expect(r.B).toMatchObject({ w: 1, wp: 3, ap: 6, sp: 10, high: 30 })
+    })
+
+    it('gives the opposing alliance the win when the DQed team was on the winning alliance', () => {
+      const r = dqMatch(30, 10, ['A'])
+      expect(r.C).toMatchObject({ w: 1, l: 0, wp: 2 })
+      expect(r.D).toMatchObject({ w: 1, l: 0, wp: 2 })
+    })
+
+    it('does not hand AWP to the opponents', () => {
+      const r = dqMatch(30, 10, ['A'], { redAWP: true })
+      expect(r.C.wp).toBe(2)
+    })
+
+    it('turns a tie into a win for the opponents; the partner keeps the tie', () => {
+      const r = dqMatch(20, 20, ['A'])
+      expect(r.C).toMatchObject({ w: 1, wp: 2 })
+      expect(r.B).toMatchObject({ t: 1, wp: 1 })
+    })
+
+    it('changes nothing for others when the DQed team was on the losing alliance', () => {
+      const r = dqMatch(30, 10, ['C'])
+      expect(r.A).toMatchObject({ w: 1, wp: 2 })
+      expect(r.D).toMatchObject({ l: 1, wp: 0 })
+    })
+
+    it('gives every non-DQed team a tie when both alliances have a DQ', () => {
+      const r = dqMatch(30, 10, ['A', 'C'])
+      expect(r.B).toMatchObject({ t: 1, w: 0, l: 0, wp: 1 })
+      expect(r.D).toMatchObject({ t: 1, w: 0, l: 0, wp: 1 })
+      expect(r.A).toMatchObject({ l: 1, wp: 0 })
+    })
+  })
+
   it('does not count surrogate appearances', () => {
     const r = byTeam(computeRankings([], [match('Q1', ['A', 'B'], ['C', 'D'], { redScore: 10, blueScore: 5, surrogates: ['A'] })]))
     expect(r.A.played).toBe(0)
