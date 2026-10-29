@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { settings } from '../settings'
+import { playBuzzer, playStart } from '../sounds'
 
 const { autonSeconds, pauseSeconds, driverSeconds } = settings.timer
 const PHASES = [
@@ -39,28 +40,15 @@ export default function Timer() {
     return () => clearInterval(id)
   }, [startedAt, done])
 
-  const beep = (freq: number, ms: number) => {
-    const ctx = audio.current
-    if (!ctx || !beeps) return
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.frequency.value = freq
-    gain.gain.value = 0.3
-    osc.connect(gain).connect(ctx.destination)
-    osc.start()
-    osc.stop(ctx.currentTime + ms / 1000)
-  }
-
-  // Beep once per whole second: period start (high), last 3 seconds (ticks), period end (low).
-  const key = done ? 'done' : phase ? `${phase.i}:${phase.remaining}` : ''
+  // Like the field: start beep when auton/driver begins, buzzer when each ends.
+  const key = done ? 'done' : phase ? String(phase.i) : ''
   useEffect(() => {
     if (!key || key === lastTick.current) return
     lastTick.current = key
-    if (done) beep(440, 900)
-    else if (!phase) return
-    else if (phase.label === 'Pause') phase.remaining === phase.secs && beep(440, 700)
-    else if (phase.remaining === phase.secs) beep(880, 400)
-    else if (phase.remaining <= 3) beep(660, 120)
+    const ctx = audio.current
+    if (!ctx || !beeps) return
+    if (done || phase?.label === 'Pause') playBuzzer(ctx)
+    else playStart(ctx)
   }, [key])
 
   const start = () => {
