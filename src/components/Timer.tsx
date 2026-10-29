@@ -2,11 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import { settings } from '../settings'
 import { playBuzzer, playStart } from '../sounds'
 
-const { autonSeconds, pauseSeconds, driverSeconds } = settings.timer
-const PHASES = [
-  { label: 'Autonomous', secs: autonSeconds },
-  { label: 'Pause', secs: pauseSeconds },
-  { label: 'Driver Control', secs: driverSeconds },
+const { countdownSeconds, autonSeconds, pauseSeconds, driverSeconds } = settings.timer
+
+interface Phase {
+  label: string
+  secs: number
+  countdown?: boolean // show 3, 2, 1 instead of a clock
+  sound?: 'start' | 'buzzer' // played as the phase begins
+}
+const PHASES: Phase[] = [
+  { label: 'Get Ready', secs: countdownSeconds, countdown: true },
+  { label: 'Autonomous', secs: autonSeconds, sound: 'start' },
+  { label: 'Driver Control in', secs: pauseSeconds, countdown: true, sound: 'buzzer' },
+  { label: 'Driver Control', secs: driverSeconds, sound: 'start' },
 ]
 const TOTAL = PHASES.reduce((s, p) => s + p.secs, 0)
 
@@ -27,6 +35,7 @@ export default function Timer() {
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [now, setNow] = useState(Date.now())
   const [beeps, setBeeps] = useState(true)
+  const [fullscreen, setFullscreen] = useState(false)
   const audio = useRef<AudioContext | null>(null)
   const lastTick = useRef('')
 
@@ -40,15 +49,27 @@ export default function Timer() {
     return () => clearInterval(id)
   }, [startedAt, done])
 
-  // Like the field: start beep when auton/driver begins, buzzer when each ends.
+  // Leaving browser fullscreen (or pressing Esc when the browser refused it) shrinks the timer back.
+  useEffect(() => {
+    const onChange = () => !document.fullscreenElement && setFullscreen(false)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFullscreen(false)
+    document.addEventListener('fullscreenchange', onChange)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
+
+  // Like the field: start sound when auton/driver begins, buzzer when each ends.
   const key = done ? 'done' : phase ? String(phase.i) : ''
   useEffect(() => {
     if (!key || key === lastTick.current) return
     lastTick.current = key
     const ctx = audio.current
-    if (!ctx || !beeps) return
-    if (done || phase?.label === 'Pause') playBuzzer(ctx)
-    else playStart(ctx)
+    const sound = done ? 'buzzer' : phase?.sound
+    if (!ctx || !beeps || !sound) return
+    ;(sound === 'start' ? playStart : playBuzzer)(ctx)
   }, [key])
 
   const start = () => {
@@ -59,19 +80,29 @@ export default function Timer() {
     setStartedAt(Date.now())
   }
 
+  // The timer covers the whole window either way; real browser fullscreen is a bonus where allowed.
+  const toggleFullscreen = () => {
+    if (fullscreen && document.fullscreenElement) document.exitFullscreen()
+    else if (!fullscreen) document.documentElement.requestFullscreen?.().catch(() => {})
+    setFullscreen(!fullscreen)
+  }
+
   const label = done ? 'Match Over' : phase?.label ?? 'Ready'
-  const time = done ? 0 : phase ? (phase.label === 'Pause' ? PHASES[2].secs : phase.remaining) : autonSeconds
-  const colour = done ? 'text-zinc-500' : phase?.label === 'Pause' ? 'text-amber-400' : phase && time <= 10 ? 'text-alliance-red' : 'text-white'
+  const big = done ? clock(0) : !phase ? clock(autonSeconds) : phase.countdown ? String(phase.remaining) : clock(phase.remaining)
+  const colour = done ? 'text-zinc-500' : phase?.countdown ? 'text-amber-400' : phase && phase.remaining <= 10 ? 'text-alliance-red' : 'text-white'
 
   return (
-    <div className="flex h-full flex-col items-center justify-center">
-      <div className="text-[2.5vw] font-semibold uppercase tracking-widest text-zinc-400">{label}</div>
-      <div className={`text-[9vw] leading-none font-black tabular-nums ${colour}`}>{clock(time)}</div>
-      <div className="mt-3 flex items-center gap-3 text-sm opacity-60 transition-opacity hover:opacity-100">
+    <div className={`flex flex-col items-center justify-center ${fullscreen ? 'fixed inset-0 z-50 bg-zinc-950' : 'h-full bg-zinc-900'}`}>
+      <div className={`${fullscreen ? 'text-[5vw]' : 'text-[2.5vw]'} font-semibold uppercase tracking-widest text-zinc-400`}>
+        {label}
+      </div>
+      <div className={`${fullscreen ? 'text-[30vw]' : 'text-[9vw]'} leading-none font-black tabular-nums ${colour}`}>{big}</div>
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm whitespace-nowrap opacity-60 transition-opacity hover:opacity-100">
         {startedAt == null || done
           ? <button className="btn" onClick={start}>Start</button>
           : <button className="btn" onClick={() => setStartedAt(null)}>Reset</button>}
-        <label><input type="checkbox" checked={beeps} onChange={(e) => setBeeps(e.target.checked)} /> Beeps</label>
+        <button className="btn" onClick={toggleFullscreen}>{fullscreen ? 'Exit fullscreen' : 'Fullscreen'}</button>
+        <label><input type="checkbox" checked={beeps} onChange={(e) => setBeeps(e.target.checked)} /> Sound</label>
       </div>
     </div>
   )

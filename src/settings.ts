@@ -6,6 +6,7 @@ export const settings = {
   autonWinAP: 6,
   autonTieAP: 3,
   timer: {
+    countdownSeconds: 3, // 3-2-1 before auton starts
     autonSeconds: 15,
     pauseSeconds: 3,
     driverSeconds: 105,
